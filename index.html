@@ -1,0 +1,324 @@
+<!doctype HTML>
+<!--
+MIT License
+
+Copyright (c) 2023 Jason Benoit and Fanshawe OER Design Studio
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+-->
+<html lang='en'>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <title>Pressbooks PDF LaTeX Colour Fixer</title>
+        <meta author="Jason Benoit / Fanshawe OER Design Studio" />
+        <script type="text/javascript">
+            
+            var colourMap = new Map();
+            
+            const initializeMap = function(){
+                
+                colourMap.set("color[rgb]{1.0, 0.0, 0.0}", "color{red}");
+                colourMap.set("color[rgb]{0.5, 0.0, 0.0}", "color{darkred}");
+                colourMap.set("color[rgb]{1.0, 0.0, 1.0}", "color{pink}");
+                colourMap.set("color[rgb]{0.0, 0.0, 1.0}", "color{blue}");
+                colourMap.set("color[rgb]{0.0, 1.0, 0.0}", "color{green}");
+                colourMap.set("color[rgb]{0.0, 0.5, 0.0}", "color{darkgreen}");
+                colourMap.set("color[rgb]{0.9, 0.76, 0.02}", "color{orange}");
+                colourMap.set("color[rgb]{0.68, 0.46, 0.12}", "color{brown}");
+                colourMap.set("color[rgb]{0.5, 0.0, 0.5}", "color{purple}");
+                colourMap.set("color[rgb]{0.1, 0.1, 0.1}", "color{black}");               
+            }
+            
+            const fixLaTeX = function(){
+               
+                //first determine which type of fix needs to be done
+                let latex = document.getElementById("inputTxt").value;
+                
+                //check for equation arrays and handle
+                let prefix = "[latex]";
+                let suffix = "[/latex]";
+                let prefixEndIdx = latex.indexOf("]");
+                let suffixBeginIdx = latex.indexOf("[/latex]");
+                let hasOpeningBackslash = ((latex.indexOf("\\") === latex.indexOf("]") + 1) && (latex.indexOf("\\color") != latex.indexOf("]") + 1));
+                
+                if (latex.indexOf("begin{") >= 0){
+                    
+                    prefixEndIdx = latex.indexOf("}");
+                    suffixBeginIdx = latex.lastIndexOf("end{") - 1;
+                    prefix = latex.substring(0, prefixEndIdx + 1);
+                    suffix = latex.substring(suffixBeginIdx);
+                    
+                    
+                }
+                
+                latex = latex.substring(prefixEndIdx + 1, suffixBeginIdx);
+                latex = latex.replaceAll("color{Red}", "color[rgb]{1.0, 0.0, 0.0}");
+                latex = latex.replaceAll("color{Green}", "color[rgb]{0.0, 1.0, 0.0}");
+                
+                //replace improperly formatted values that are already in semantic form with their rgb form
+                for (let [key, value] of colourMap){
+                    
+                    latex = latex.replaceAll(value, key);
+                }
+                
+                    
+                //need to bracket non-colored preceding code
+                let firstColorIdx = latex.indexOf("{\\color");
+                firstColorIdx = firstColorIdx < 0 ? latex.indexOf("\\color") : firstColorIdx;
+                if (latex.indexOf("color[") > 1 && latex.charAt(0) !== "{" && !hasOpeningBackslash){
+                    latex = "{" + latex.substring(0, firstColorIdx) + "}" + latex.substr(firstColorIdx);
+                }
+
+
+
+                let braceCount = 1;
+                for (let[key, value] of colourMap){
+
+                    let pos = 0;
+                    let lastColourIdx = latex.lastIndexOf("color[");
+                    while (pos >= 0){
+                        pos = latex.indexOf(key, pos);
+                        lastColourIdx = latex.lastIndexOf("color[");
+
+                        if (pos < 0){
+                            break;
+                        }
+
+                        latex = latex.replace(key, value);
+                        latex = [latex.slice(0, pos + value.length), "{", latex.substr(pos + value.length)].join("");
+
+                        let i = pos + value.length + 1;
+
+                        let endIdx;
+                        i = findClosingBrace(i, latex, braceCount);
+
+                        // If whole colour expression is not enclosed by curly braces
+                        if (i === latex.indexOf("\\color", pos + value.length + 1) || i === latex.length){
+
+
+                            latex = [latex.slice(0, i), latex.slice(i)].join("}");
+
+                            if (pos < 2){
+                                latex = '{' + latex;
+                            }
+                            else if (latex.charAt(pos - 2) != '{'){
+                                latex = [latex.slice(0, pos - 1), "{", latex.slice(pos - 1)].join("");
+                            }
+                        }
+
+                        latex = [latex.slice(0, i + 1), latex.substr(i + 1)].join("}");
+
+                      if (pos === lastColourIdx && latex.charAt(i + 2) !== "{" && !hasOpeningBackslash){
+                          while (latex.charAt(i + 1) === '}'){
+                              i++;
+                          }
+
+                          let posChar = latex.charAt(i + 1);
+                          if (posChar != ''){
+                              latex = [latex.slice(0, i + 1), "{", latex.substring(i + 1), "}"].join("");
+                          }
+
+
+                        }
+
+
+                    }
+                }
+                    
+                    // enclose the middle stuff in braces
+//                    if (latex.indexOf("color{") != latex.lastIndexOf("color{") && !hasOpeningBackslash && latex.indexOf("{\\color") > 0){
+//                        
+//                        let firstClosingBrace = findClosingBrace(latex.indexOf("color"), latex, 1);
+//                        
+//                        latex = latex.substring(0, firstClosingBrace + 1) + "{" + latex.substring(firstClosingBrace + 1, latex.lastIndexOf("color{") - 2) + "}" + latex.substr(latex.lastIndexOf("color{") - 2);
+//                    }
+                    
+                    
+ //               }
+                    
+
+            latex = prefix + latex + suffix;
+            document.getElementById("outputTxt").value = latex;
+
+        }
+            
+        const findClosingBrace = function(index, str, bracecount = 0){
+
+            let nextColorIdx = str.indexOf("\\color", index);
+            if (nextColorIdx === -1){
+                nextColorIdx = str.length;
+            }
+            for (; index < nextColorIdx; index++){
+
+                if (str.charAt(index) === "{"){
+                    bracecount++;
+                }
+                else if (str.charAt(index) === "}"){
+                    bracecount--;
+                    if (bracecount <= 0){
+                        return index;
+                    }
+                }
+
+            }
+
+            return index;
+        }
+
+        const setup = function(){
+            initializeMap();
+            document.getElementById("submit").addEventListener("click", fixLaTeX);
+            var input = document.getElementById("inputTxt");
+            input.onfocus = ()=>{
+                input.select();
+                var status = document.getElementById("status");
+                if (!status.classList.contains("hide")){
+                    status.classList.toggle("hide");
+                }
+            };                
+
+            document.getElementById("copy").addEventListener("click", (e)=>{
+
+                var output = document.getElementById("outputTxt");
+                navigator.clipboard.writeText(output.value);
+                var status = document.getElementById("status");
+                status.innerHTML = "Copied!";
+                if (status.classList.contains("hide")){
+                    status.classList.toggle("hide");
+                }
+
+            });
+
+        }
+
+
+        window.onload = setup;
+        
+        </script>
+        <style>
+            body, header, nav, content, section {
+                display: block;
+            }           
+            
+            body {
+                background-image: url(images/fanshawe_wallpaper.jpg);
+
+            }
+            
+            #wrap {
+                width: 90%;
+            }
+            
+            li {
+                margin-bottom: 1rem;
+            }
+            
+            .userText {
+                width: 98%;
+                height: 20vh;
+                padding: 1%;
+                
+            }
+            
+            .divCenter {
+                margin-left: 50%;
+                transform: translateX(-50%);
+            }
+            
+            .hide {
+                display:none;
+            }
+            
+            nav, h1, h2, h3 {
+                text-align: center;
+            }
+            
+            h1, h2, h3, h4, a, label {
+                font-family: monospace, sans-serif;
+            }
+            
+            h1 {
+                color: white;
+            }
+            
+            content {
+                margin-top: 1rem;
+                margin-bottom: 1rem;
+            }
+            
+            section {
+                margin-bottom: 1rem;
+                border: 1px solid darkgreen;
+                width: 62%;
+                margin-left: 50%;
+                transform: translateX(-50%);
+                padding: 0.5rem;
+                /*background-color:#646469;*/
+                background-color: lightgray;
+            }
+            
+            article {
+                background-color:white;
+                border: 1px solid black;
+                
+            }   
+            
+            footer {
+                font-family: Arial, sans-serif;
+                text-align: center;
+                color: white;
+            }
+            
+            a {
+                color: white;
+            }
+            
+            #logoDiv {
+                text-align: center;
+            }
+            
+        </style>
+    </head>
+    <body>
+        <div id="wrap" class="divCenter">
+            <header>
+                <h1>Pressbooks PDF LaTeX Colour Fixer</h1>
+            </header>
+            <content>
+                <section>
+                    <textarea id="inputTxt" class="userText divCenter">Paste LaTeX here, including both '[latex]' and '[/latex]' tags.  </textarea>
+                    <div class="divCenter" style="text-align: center; margin-top: 2vh; margin-bottom: 2vh;">
+                        <button id="submit" style="width: 10rem; height: 2rem;">Fix!</button>     
+                    </div>
+                    <textarea id="outputTxt" class="userText divCenter"></textarea>
+                    <div class="divCenter" style="text-align: center; margin-top: 2vh; margin-bottom: 2vh;">
+                        <button id="copy" style="width: 10rem; height: 2rem;">Copy to Clipboard</button>
+                    </div>
+                    <div id="status" class="divCenter hide" style="text-align: center; margin-top: 2vh; margin-bottom: 2vh;"></div>
+                </section>
+                <div id="logoDiv"><img src="images/oer_logo.png" style="width: 74px;"/></div>
+            </content>
+            <footer>
+                <div>Pressbooks PDF LaTeX Colour Fixer by Jason Benoit and the Fanshawe OER Design Studio is open source software made available under the <a href="https://choosealicense.com/licenses/mit/">MIT License</a>.
+            </div>
+            </footer>
+        </div>    
+    </body>
+</html>
