@@ -63,9 +63,7 @@ SOFTWARE.
                     prefixEndIdx = latex.indexOf("}");
                     suffixBeginIdx = latex.lastIndexOf("end{") - 1;
                     prefix = latex.substring(0, prefixEndIdx + 1);
-                    suffix = latex.substring(suffixBeginIdx);
-                    
-                    
+                    suffix = latex.substring(suffixBeginIdx);      
                 }
                 
                 latex = latex.substring(prefixEndIdx + 1, suffixBeginIdx);
@@ -77,16 +75,13 @@ SOFTWARE.
                     
                     latex = latex.replaceAll(value, key);
                 }
-                
-                    
+                                   
                 //need to bracket non-colored preceding code
                 let firstColorIdx = latex.indexOf("{\\color");
                 firstColorIdx = firstColorIdx < 0 ? latex.indexOf("\\color") : firstColorIdx;
                 if (latex.indexOf("color[") > 1 && latex.charAt(0) !== "{" && !hasOpeningBackslash){
                     latex = "{" + latex.substring(0, firstColorIdx) + "}" + latex.substr(firstColorIdx);
                 }
-
-
 
                 let braceCount = 1;
                 for (let[key, value] of colourMap){
@@ -112,7 +107,6 @@ SOFTWARE.
                         // If whole colour expression is not enclosed by curly braces
                         if (i === latex.indexOf("\\color", pos + value.length + 1) || i === latex.length){
 
-
                             latex = [latex.slice(0, i), latex.slice(i)].join("}");
 
                             if (pos < 2){
@@ -134,29 +128,12 @@ SOFTWARE.
                           if (posChar != ''){
                               latex = [latex.slice(0, i + 1), "{", latex.substring(i + 1), "}"].join("");
                           }
-
-
                         }
-
-
                     }
                 }
                     
-                    // enclose the middle stuff in braces
-//                    if (latex.indexOf("color{") != latex.lastIndexOf("color{") && !hasOpeningBackslash && latex.indexOf("{\\color") > 0){
-//                        
-//                        let firstClosingBrace = findClosingBrace(latex.indexOf("color"), latex, 1);
-//                        
-//                        latex = latex.substring(0, firstClosingBrace + 1) + "{" + latex.substring(firstClosingBrace + 1, latex.lastIndexOf("color{") - 2) + "}" + latex.substr(latex.lastIndexOf("color{") - 2);
-//                    }
-                    
-                    
- //               }
-                    
-
             latex = prefix + latex + suffix;
             document.getElementById("outputTxt").value = latex;
-
         }
             
         const findClosingBrace = function(index, str, bracecount = 0){
@@ -176,7 +153,6 @@ SOFTWARE.
                         return index;
                     }
                 }
-
             }
 
             return index;
@@ -203,12 +179,9 @@ SOFTWARE.
                 if (status.classList.contains("hide")){
                     status.classList.toggle("hide");
                 }
-
             });
-
         }
-
-
+            
         window.onload = setup;
         
         </script>
