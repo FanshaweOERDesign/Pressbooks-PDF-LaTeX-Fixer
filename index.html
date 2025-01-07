@@ -188,17 +188,6 @@ SOFTWARE.
                 }
             }
 
-            // enclose the middle stuff in braces
-            //                    if (latex.indexOf("color{") != latex.lastIndexOf("color{") && !hasOpeningBackslash && latex.indexOf("{\\color") > 0){
-            //                        
-            //                        let firstClosingBrace = findClosingBrace(latex.indexOf("color"), latex, 1);
-            //                        
-            //                        latex = latex.substring(0, firstClosingBrace + 1) + "{" + latex.substring(firstClosingBrace + 1, latex.lastIndexOf("color{") - 2) + "}" + latex.substr(latex.lastIndexOf("color{") - 2);
-            //                    }
-
-
-            //               }
-
             latex = latex.replaceAll('\\mbox', '\\text');
 
             // Add space placeholder ('@!@') after each LaTeX math element that requires space if the next element is a letter or number
@@ -224,7 +213,7 @@ SOFTWARE.
             while (textIndex >= 0) {
                 let closingBraceIndex = findClosingBrace(textIndex + 6, latex);
                 let text = latex.substring(textIndex, closingBraceIndex + 1);
-                let newText = text.replaceAll(' ', '@!;');
+                let newText = text.trim().replaceAll(' ', '@!;');
                 latex = latex.substring(0, textIndex) + newText + latex.substring(closingBraceIndex + 1);
                 textIndex = latex.indexOf('\\text{', closingBraceIndex + 1);
             }
